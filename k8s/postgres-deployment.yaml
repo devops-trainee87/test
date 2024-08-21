@@ -1,0 +1,81 @@
+# postgres-deployment.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: coffee-db-pv
+  namespace: coffee-app
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"  # This is specific to Minikube; adjust as necessary
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: coffee-db-pvc
+  namespace: coffee-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coffee-db-deployment
+  namespace: coffee-app
+spec:
+  selector:
+    matchLabels:
+      app: coffee-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: coffee-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: coffee-app-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: coffee-app-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secret
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-storage
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: coffee-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coffee-db-service
+  namespace: coffee-app
+spec:
+  ports:
+    - port: 5432
+  selector:
+    app: coffee-db
+  type: ClusterIP

@@ -1,0 +1,5 @@
+resources:
+- fastapi-deployment.yaml
+images:
+- name: APP_IMAGE
+  newName2: berezine81/coffeeapialpine

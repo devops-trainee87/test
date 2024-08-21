@@ -1,0 +1,56 @@
+# fastapi-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coffee-app-deployment
+  namespace: coffee-app
+spec:
+  selector:
+    matchLabels:
+      app: coffee-app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: coffee-app
+    spec:
+      containers:
+        - name: coffee-app
+          image: APP_IMAGE  # Replace with your actual image
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: coffee-app-config
+                  key: DB_HOST
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: coffee-app-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: coffee-app-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: coffee-app-secret
+                  key: POSTGRES_PASSWORD
+          ports:
+            - containerPort: 8000
+          imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coffee-app-service
+  namespace: coffee-app
+spec:
+  ports:
+    - port: 80
+      targetPort: 8000
+  selector:
+    app: coffee-app
+  type: NodePort  # You can also use LoadBalancer if supported
